@@ -1,12 +1,8 @@
 package tasks;
 
 import common.Person;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,66 +18,62 @@ P.P.S Здесь ваши правки желательно прокоммент
 public class Task8 {
 
   private long count;
+  final int PERSONS_SKIP = 1;
 
-  //Не хотим выдывать апи нашу фальшивую персону, поэтому конвертим начиная со второй
+  /* Не хотим выдывать апи нашу фальшивую персону, поэтому конвертим начиная со второй
+     Здесь лучше использовать метод skip без лишних проверок длины массива. Если список пуст - он тоже вернет пустой
+     список.
+     0 лучше вынести в константу - сегодня у нас 1 фальшивая песона, а завтра 10 и менять этот параметр по коду неудобно.
+   */
   public List<String> getNames(List<Person> persons) {
-    if (persons.size() == 0) {
-      return Collections.emptyList();
-    }
-    persons.remove(0);
-    return persons.stream().map(Person::getFirstName).collect(Collectors.toList());
+    return persons.stream().skip(PERSONS_SKIP).map(Person::getFirstName).collect(Collectors.toList());
   }
 
-  //ну и различные имена тоже хочется
+  /* ну и различные имена тоже хочется
+    Нет необходимости пропускать данные через stream, достаточно преобразовать сразу в HashSet.
+    Это обеспечит уникальность элементов.
+   */
   public Set<String> getDifferentNames(List<Person> persons) {
-    return getNames(persons).stream().distinct().collect(Collectors.toSet());
+    return new HashSet<>(getNames(persons));
   }
 
-  //Для фронтов выдадим полное имя, а то сами не могут
+  /* Для фронтов выдадим полное имя, а то сами не могут
+    Оба метода возвращают строки, нет необходимости создания пустой строки для дальнейшей конкатенации.
+    Судя по конструктору класса Person, атрибут FirstName является обязательным, соответственно не может быть пустым.
+    Достаточно выполнить проверку для getSecondName()
+   */
   public String convertPersonToString(Person person) {
-    String result = "";
-    if (person.getSecondName() != null) {
-      result += person.getSecondName();
+    String personSecondName = person.getSecondName();
+    if (personSecondName == null) {
+      return person.getFirstName();
     }
-
-    if (person.getFirstName() != null) {
-      result += " " + person.getFirstName();
-    }
-
-    if (person.getSecondName() != null) {
-      result += " " + person.getSecondName();
-    }
-    return result;
+    return person.getFirstName() + " " + personSecondName;
   }
 
-  // словарь id персоны -> ее имя
+  /* словарь id персоны -> ее имя
+  Не совсем понял, зачем начальная емкость словаря указана и опять захардкожена 1 вместо константы
+  Кажется, не очень хорошо называть переменную map так же, как тип данных. Можно обойтись без переменной.
+  Элегантнее собрать словарь через stream
+   */
   public Map<Integer, String> getPersonNames(Collection<Person> persons) {
-    Map<Integer, String> map = new HashMap<>(1);
-    for (Person person : persons) {
-      if (!map.containsKey(person.getId())) {
-        map.put(person.getId(), convertPersonToString(person));
-      }
-    }
-    return map;
+    return persons.stream()
+            .collect(Collectors.toMap(Person::getId, Person::getFirstName));
   }
 
-  // есть ли совпадающие в двух коллекциях персоны?
+  /*
+   есть ли совпадающие в двух коллекциях персоны?
+    Собираем две коллекции в один сет. Если количество элементов в общем сете не равно сумме элементов в каждом сете
+    поотдельности - значит был неуникальный объект.
+    Наверное, собрать сет и без стрима.
+   */
   public boolean hasSamePersons(Collection<Person> persons1, Collection<Person> persons2) {
-    boolean has = false;
-    for (Person person1 : persons1) {
-      for (Person person2 : persons2) {
-        if (person1.equals(person2)) {
-          has = true;
-        }
-      }
-    }
-    return has;
+    Set<Person> personsSum = Stream.concat(persons1.stream(), persons2.stream())
+            .collect(Collectors.toSet());
+    return persons1.size() + persons2.size() != personsSum.size();
   }
 
-  //...
+  //можно воспользоваться стандартным методом потока без использования лишней памяти
   public long countEven(Stream<Integer> numbers) {
-    count = 0;
-    numbers.filter(num -> num % 2 == 0).forEach(num -> count++);
-    return count;
+    return numbers.filter(num -> num % 2 == 0).count();
   }
 }
