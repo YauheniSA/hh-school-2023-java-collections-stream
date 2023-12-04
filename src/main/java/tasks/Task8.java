@@ -3,6 +3,7 @@ package tasks;
 import common.Person;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,6 +25,7 @@ public class Task8 {
      Здесь лучше использовать метод skip без лишних проверок длины массива. Если список пуст - он тоже вернет пустой
      список.
      0 лучше вынести в константу - сегодня у нас 1 фальшивая песона, а завтра 10 и менять этот параметр по коду неудобно.
+     Да, и еще удаление первого элемента списка будет стоить нам О(n), поскольку придется сдвинуть все оставшиеся элементы
    */
   public List<String> getNames(List<Person> persons) {
     return persons.stream().skip(PERSONS_SKIP).map(Person::getFirstName).collect(Collectors.toList());
@@ -38,42 +40,45 @@ public class Task8 {
   }
 
   /* Для фронтов выдадим полное имя, а то сами не могут
-    Оба метода возвращают строки, нет необходимости создания пустой строки для дальнейшей конкатенации.
-    Судя по конструктору класса Person, атрибут FirstName является обязательным, соответственно не может быть пустым.
-    Достаточно выполнить проверку для getSecondName()
+    Исправил через фильтрацию потока и дальнейший джоин в строку.
    */
   public String convertPersonToString(Person person) {
-    String personSecondName = person.getSecondName();
-    if (personSecondName == null) {
-      return person.getFirstName();
-    }
-    return person.getFirstName() + " " + personSecondName;
+    return Stream.of(person.getFirstName(), person.getMiddleName(), person.getSecondName())
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining(" "));
   }
 
   /* словарь id персоны -> ее имя
   Не совсем понял, зачем начальная емкость словаря указана и опять захардкожена 1 вместо константы
   Кажется, не очень хорошо называть переменную map так же, как тип данных. Можно обойтись без переменной.
-  Элегантнее собрать словарь через stream
+  Элегантнее собрать словарь через stream.
    */
   public Map<Integer, String> getPersonNames(Collection<Person> persons) {
     return persons.stream()
-            .collect(Collectors.toMap(Person::getId, Person::getFirstName));
+            .collect(Collectors.toMap(Person::getId, Person::getFirstName, (existing, renewed) -> existing));
   }
 
   /*
    есть ли совпадающие в двух коллекциях персоны?
-    Собираем две коллекции в один сет. Если количество элементов в общем сете не равно сумме элементов в каждом сете
-    поотдельности - значит был неуникальный объект.
-    Наверное, собрать сет и без стрима.
+    Собираем map из двух коллекций с уникальными объектами, где ключ - объект, значение - счетчик этого объекта.
+    Возвращаем булевое значение, харакетиризующее наличие дубликатов.
+    Вместо сложности О(n2), получаем O(n)
    */
   public boolean hasSamePersons(Collection<Person> persons1, Collection<Person> persons2) {
-    Set<Person> personsSum = Stream.concat(persons1.stream(), persons2.stream())
-            .collect(Collectors.toSet());
-    return persons1.size() + persons2.size() != personsSum.size();
+    return Stream.concat(persons1.stream().distinct(), persons2.stream().distinct())
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+            .entrySet()
+            .stream()
+            .anyMatch(personCount -> personCount.getValue() > 1);
   }
 
-  //можно воспользоваться стандартным методом потока без использования лишней памяти
-  public long countEven(Stream<Integer> numbers) {
-    return numbers.filter(num -> num % 2 == 0).count();
+  /*
+  можно воспользоваться стандартным методом потока без использования лишней памяти
+  Да, действительно, наш метод в качестве аргумента принимает поток, а мы вызываем теминальный метод и закрываем его.
+  Правильнее было бы передавать коллекцию, открывать поток, проводить с ним манипуляции и закрывать.
+  Пробрасывать поток по методам неправильно. Кто открыл его - тот его и закрывает.
+   */
+  public long countEven(Collection<Integer> numbers) {
+    return numbers.stream().filter(num -> num % 2 == 0).count();
   }
 }
