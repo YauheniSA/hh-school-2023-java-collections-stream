@@ -60,16 +60,13 @@ public class Task8 {
 
   /*
    есть ли совпадающие в двух коллекциях персоны?
-    Собираем map из двух коллекций с уникальными объектами, где ключ - объект, значение - счетчик этого объекта.
-    Возвращаем булевое значение, харакетиризующее наличие дубликатов.
     Вместо сложности О(n2), получаем O(n)
    */
   public boolean hasSamePersons(Collection<Person> persons1, Collection<Person> persons2) {
-    return Stream.concat(persons1.stream().distinct(), persons2.stream().distinct())
-            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-            .entrySet()
-            .stream()
-            .anyMatch(personCount -> personCount.getValue() > 1);
+    HashSet<Person> personsSet2 = new HashSet<>(persons2);
+    return persons1.stream()
+            .anyMatch(personsSet2::contains);
+
   }
 
   /*
